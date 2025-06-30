@@ -12,13 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define CLOCK_ADJUSTMENT 1
 
 /*
   Compilation automatically inserts the build time in the format: __DATE__ and __TIME__
   But does not account for timezone offset, so we need to adjust it manually
   The following timezone offset shifts your timezone into UTC
 */
-const int timezoneOffsetHours = -4;
+const int timezoneOffsetHours = -4; // Computer compiling this code's timezone offset
+
+// Timezones for display
+
+// America/New_York
+// DSTRule dstStartRule = {3, 2, -5, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -4, SundayModifier::First};
+
+// America/Chicago
+// DSTRule dstStartRule = {3, 2, -6, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -5, SundayModifier::First};
+
+// America/Denver
+// DSTRule dstStartRule = {3, 2, -7, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -6, SundayModifier::First};
+
+// America/Phoenix
+// DSTRule dstStartRule = {3, 2, -7, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -7, SundayModifier::First};   // MST year round
+
+// America/Los_Angeles
+// DSTRule dstStartRule = {3, 2, -8, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -7, SundayModifier::First};
+
+// America/Anchorage
+// DSTRule dstStartRule = {3, 2, -9, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -8, SundayModifier::First};
+
+// Pacific/Honolulu
+// DSTRule dstStartRule = {3, 2, -10, SundayModifier::Second};
+// DSTRule dstEndRule = {11, 2, -10, SundayModifier::First};  // No DST Observation
+
+// Europe/Helsinki
+// DSTRule dstStartRule = {3, 3, +2, SundayModifier::Last};   // EU date changes
+// DSTRule dstEndRule = {10, 4, +3, SundayModifier::Last};
 
 
 /*

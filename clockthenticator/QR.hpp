@@ -48,6 +48,12 @@ public:
     return *this;
   }
   
+  void setNotMaskId(int notMaskId) {
+    moduleCanvas.setNotMaskId(notMaskId);
+  }
+
+  int getBestMaskId() const { return moduleCanvas.getBestMaskId(); }
+
   void toMatrix(void (*drawPixel)(uint8_t, uint8_t, bool)) {
     int cw[MAX_CODEWORDS];
     int cwCount = 0;

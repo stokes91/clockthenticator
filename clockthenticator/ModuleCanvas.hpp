@@ -29,6 +29,7 @@ public:
   bool bestMaskedCanvasSet;
   int lowestPenalty;
   int bestMaskId;
+  int notMaskId;
   
   int edgeLength;
   int version;
@@ -38,7 +39,7 @@ public:
   
   ModuleCanvas(int forcedMaskId = -1)
     : bestMaskedCanvasSet(false), lowestPenalty(0), bestMaskId(forcedMaskId),
-    edgeLength(EDGE_LENGTH), version(2), errorCorrectionLevel(1) {
+    edgeLength(EDGE_LENGTH), version(2), errorCorrectionLevel(1), notMaskId(-1) {
     for (int i = 0; i < edgeLength * edgeLength; i++)
       rawCanvas[i] = 0;
     barcodeCanvas.reset();
@@ -61,6 +62,12 @@ public:
     placeFunctionPatterns();
   }
   
+  void setNotMaskId(int _notMaskId) {
+    notMaskId = _notMaskId;
+  }
+  
+  int getBestMaskId() const { return bestMaskId; }
+
   void placeDataBits(const int allCodewords[], int codewordsCount) {
     reset();
     drawFormatBits(0);
@@ -90,6 +97,7 @@ public:
       applyMaskAndEvaluate(bestMaskId);
     } else {
       for (int candidateMask = 0; candidateMask < 8; candidateMask++) {
+        if (candidateMask == notMaskId) continue;
         drawFormatBits(candidateMask);
         applyMaskAndEvaluate(candidateMask);
       }

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "DateUtil.hpp"
 
 #include "Configuration.hpp"
 // Configuration.hpp contains the following:
@@ -24,42 +25,18 @@
 #include "QR.hpp"
 #include "SevenSeg.hpp"
 
-/*  */
-
 /* LED Matrix */
 #include "MatrixDisplay_LED.hpp"
 
-/* */
-
-/* LCD Matrix 
-
-#include "MatrixDisplay_LCD.hpp"
-
-*/
-
 #include "RTWPreferences.hpp"
 #include "SwitchControl.hpp"
-#include "DateUtil.hpp"
 
 #include <Wire.h>
-
 #include <RTClib.h>
 
-/*
-
-Board manager URL:
-https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_dev_index.json
-
-Install:
-esp32 by Espressif Systems
-
-*/
-
-
-#define MAX_FPS 10 // Maximum redraw rate, frames/second
+#define MAX_FPS 1 // Maximum redraw rate, frames/second
 
 #define BUTTON_DEBOUNCE_MS 100
-#define CLOCK_ADJUSTMENT 1
 
 #define BUTTON_UP    6  // A button
 #define BUTTON_DOWN  7  // B button
@@ -75,6 +52,7 @@ int lastHalfMinute = -1;
 
 int clockOffset = 0;
 
+int notMaskId = -1;
 uint8_t code[9] = "00000000";
 
 HOTP hotp = HOTP();
@@ -227,10 +205,10 @@ void loop() {
   unsigned long currentHalfMinute = seconds / 30L;
   
   // Only update and print when the half minute changes
-  if (lastHalfMinute == seconds) {
+  if (lastHalfMinute == currentHalfMinute) {
     return;
   }
-  lastHalfMinute = seconds;
+  lastHalfMinute = currentHalfMinute;
 
   // Generate a new HOTP code
   // This includes the full 64 bit timestamp
@@ -246,13 +224,23 @@ void loop() {
   
   int row = 1;
 
-  int date_coded_year = dateUtil.getCurrentYYYY();
+  // Adjusted local time
+  DSTBounds usBounds = updateDSTBounds(dateUtil.getCurrentYYYY(), dstStartRule, dstEndRule);
+  int localTZOffset = getUTCOffsetForRegion(seconds, dstStartRule.utcOffset, usBounds);
+
+  Serial.print("Local offset: ");
+  Serial.println(localTZOffset);
+
+  long localTimeSeconds = seconds + localTZOffset * 3600;
+  DateUtil localDateUtil(localTimeSeconds);
+
+  int date_coded_year = localDateUtil.getCurrentYYYY();
 
   drawDigits(date_coded_year, 4, WIDTH - 23, 25);
 
   drawDigit(DIGIT_SEP_DATE, WIDTH - 20, 25, drawPixel);
 
-  int date_coded_date = dateUtil.getCurrentMMDD();
+  int date_coded_date = localDateUtil.getCurrentMMDD();
 
   drawDigits(date_coded_date / 100, 2, WIDTH - 13, 25);
 
@@ -260,7 +248,7 @@ void loop() {
 
   drawDigits(date_coded_date % 100, 2, WIDTH - 3, 25);
   
-  int date_coded_time = dateUtil.getCurrentHHMM();
+  int date_coded_time = localDateUtil.getCurrentHHMM();
 
   drawDigitsDoubled(date_coded_time / 100, 2, WIDTH - 27, 4);
 
@@ -317,11 +305,19 @@ void loop() {
   }
   Serial.println();
 
-  // QR code generation is single segment.
-  qr.appendBinarySegment(uri, HOSTNAME_SECTION + TIME_HINT_SECTION + CODE_SECTION);
+  // Don't display codes if the clock was adjusted to the build time.
+  // Return the clock adjustment to 0 to display codes in Configuration.hpp
+  if (!CLOCK_ADJUSTMENT) {
+    // QR code generation is single segment.
+    qr.appendBinarySegment(uri, HOSTNAME_SECTION + TIME_HINT_SECTION + CODE_SECTION);
 
-  // Draw the QR code
-  qr.toMatrix(qrDrawPixel);
+    // Draw the QR code
+    qr.toMatrix(qrDrawPixel);
+
+    // Ensure the mask gets changed each time
+    notMaskId = qr.getBestMaskId();
+    qr.setNotMaskId(notMaskId);
+  }
 
   // Copy data to matrix buffers
   matrix.show();
