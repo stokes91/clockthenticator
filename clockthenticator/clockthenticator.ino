@@ -69,6 +69,9 @@ SwitchControl buttonDown(BUTTON_DOWN, 100);
 
 MatrixDisplay matrix;
 
+bool indicatorAm = true;
+bool indicatorPm = false;
+
 void setup() {
   Serial.begin(57600);
 
@@ -90,26 +93,28 @@ void setup() {
   hotp.setSecret();
 
   // Adjust RTC time to the build timestamp
+  if (CLOCK_ADJUSTMENT) {
+      
+    // Capture local compile time
+    DateTime localBuildTime(F(__DATE__), F(__TIME__));
+
+    const int32_t timezoneOffsetSeconds = timezoneOffsetHours * 3600;
+
+    // Adjust local build time to UTC explicitly
+    DateTime utcBuildTime(localBuildTime.unixtime() - timezoneOffsetSeconds);
+    
+    // Set RTC time to UTC
+    rtc.adjust(utcBuildTime);
+    
+    Serial.print("RTC set to UTC build time: ");
+    Serial.println(utcBuildTime.timestamp());
+    
+    clockOffset = utcBuildTime.unixtime() - rtc.now().unixtime();
+
+    // With a clock adjustment, also reset the offset.
+    rtc.resetOffset();
+  }
   
-  // Capture local compile time
-  DateTime localBuildTime(F(__DATE__), F(__TIME__));
-
-  const int32_t timezoneOffsetSeconds = timezoneOffsetHours * 3600;
-
-  // Adjust local build time to UTC explicitly
-  DateTime utcBuildTime(localBuildTime.unixtime() - timezoneOffsetSeconds);
-  
-  // Set RTC time to UTC
-  rtc.adjust(utcBuildTime);
-
-  Serial.print("RTC set to UTC build time: ");
-  Serial.println(utcBuildTime.timestamp());
-
-  clockOffset = utcBuildTime.unixtime() - rtc.now().unixtime();
-
-  // With a clock adjustment, also reset the offset.
-  rtc.resetOffset();
-
   buttonUp.setup();
   buttonDown.setup();
 }
@@ -152,6 +157,7 @@ void drawDigitsDoubled(uint32_t date_coded_year, uint8_t digits, uint8_t x, uint
 
 
 void loop() {
+
   uint32_t now = millis();
   uint32_t msAgo = now - lastTime;
   
@@ -218,10 +224,6 @@ void loop() {
   
   unsigned long time_hint_number = currentHalfMinute;
 
-  // Clear the matrix
-  matrix.fillScreen(false);
-
-  
   int row = 1;
 
   // Adjusted local time
@@ -236,6 +238,30 @@ void loop() {
 
   int date_coded_year = localDateUtil.getCurrentYYYY();
 
+  int date_coded_time = localDateUtil.getCurrentHHMM();
+
+  if ((date_coded_time > 0 && date_coded_time < 600) || 
+      (date_coded_time > 1800 && date_coded_time < 2400)) {
+    matrix.setFgColor(32, 16, 3);
+    matrix.setBgColor(0, 0, 0);
+  } else {
+    matrix.setFgColor(255, 255, 255);
+    matrix.setBgColor(34, 34, 12);
+  }
+
+  if (date_coded_time > 1259) {
+    date_coded_time -= 1200;
+    indicatorPm = true;
+    indicatorAm = false;
+  } else {
+    indicatorPm = false;
+    indicatorAm = true;
+  }
+
+  // Clear the matrix
+  matrix.fillScreen(false);
+
+  
   drawDigits(date_coded_year, 4, WIDTH - 23, 25);
 
   drawDigit(DIGIT_SEP_DATE, WIDTH - 20, 25, drawPixel);
@@ -248,13 +274,14 @@ void loop() {
 
   drawDigits(date_coded_date % 100, 2, WIDTH - 3, 25);
   
-  int date_coded_time = localDateUtil.getCurrentHHMM();
+  drawDigit(indicatorAm ? DIGIT_IND_A : DIGIT_IND_P, WIDTH - 10, 17, drawPixel);
+  drawDigit(DIGIT_IND_M, WIDTH - 6, 17, drawPixel);
 
-  drawDigitsDoubled(date_coded_time / 100, 2, WIDTH - 27, 4);
+  drawDigitsDoubled(date_coded_time / 100, 2, WIDTH - 27, 2);
 
-  drawDigitDoubled(DIGIT_SEP_TIME, WIDTH - 21, 4, drawPixel);
+  drawDigitDoubled(DIGIT_SEP_TIME, WIDTH - 21, 2, drawPixel);
 
-  drawDigitsDoubled(date_coded_time % 100, 2, WIDTH - 6, 4);
+  drawDigitsDoubled(date_coded_time % 100, 2, WIDTH - 6, 2);
 
   // Convert to HHMM
 
@@ -312,6 +339,8 @@ void loop() {
     qr.appendBinarySegment(uri, HOSTNAME_SECTION + TIME_HINT_SECTION + CODE_SECTION);
 
     // Draw the QR code
+    matrix.setFgColor(255, 255, 255);
+    matrix.setBgColor(0, 0, 0);
     qr.toMatrix(qrDrawPixel);
 
     // Ensure the mask gets changed each time

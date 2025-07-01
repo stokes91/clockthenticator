@@ -40,24 +40,37 @@ Adafruit_Protomatter _matrix(
   clockPin, latchPin, oePin, true);
 
 class MatrixDisplay {
+private:
+  uint16_t fgColor;
+  uint16_t bgColor;
+
 public:
 
   MatrixDisplay() { 
-
+    fgColor = 0;
+    bgColor = 0;
   }
 
   void setup() {
     ProtomatterStatus status = _matrix.begin();
   }
 
+  void setFgColor(int r, int g, int b) {
+    fgColor = _matrix.color565(r, g, b);
+  }
+
+  void setBgColor(int r, int g, int b) {
+    bgColor = _matrix.color565(r, g, b);
+  }
+
   void drawPixel(uint8_t x, uint8_t y, bool on) {
     // Hook this to your LED matrix API
     
-    _matrix.drawPixel(x, y, on ? _matrix.color565(255, 255, 255) : _matrix.color565(0, 0, 0));
+    _matrix.drawPixel(x, y, on ? fgColor : bgColor);
   }
 
   void fillScreen(bool on) {
-    _matrix.fillScreen(on ? _matrix.color565(255, 255, 255) : _matrix.color565(0, 0, 0));
+    _matrix.fillScreen(on ? fgColor : bgColor);
   }
 
   void show() {

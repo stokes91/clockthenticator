@@ -26,10 +26,14 @@ Map the digit to a seven segment output
 
 #include <Arduino.h>
 
-#define DIGIT_SEP_DATE 11
-#define DIGIT_SEP_TIME 10
 
-const uint8_t digitBitmaps[12][7] = {
+#define DIGIT_SEP_TIME 10
+#define DIGIT_SEP_DATE 11
+#define DIGIT_IND_A 12
+#define DIGIT_IND_P 13
+#define DIGIT_IND_M 14
+
+const uint8_t digitBitmaps[15][7] = {
   // Each array represents a 3x7 grid, one byte per row (LSB = leftmost pixel)
   { 0b111, 0b101,0b101, 0b101, 0b101,0b101, 0b111 }, // 0
   { 0b001, 0b001,0b001, 0b001, 0b001,0b001, 0b001 }, // 1
@@ -43,11 +47,14 @@ const uint8_t digitBitmaps[12][7] = {
   { 0b111, 0b101,0b101, 0b111, 0b001,0b001, 0b111 }, // 9
   { 0b000, 0b010,0b000, 0b000, 0b000,0b010, 0b000 }, // :
   { 0b000, 0b000,0b000, 0b010, 0b000,0b000, 0b000 }, // .
+  { 0b010, 0b101,0b101, 0b111, 0b101,0b101, 0b101 }, // A
+  { 0b111, 0b101,0b101, 0b111, 0b100,0b100, 0b100 }, // P
+  { 0b000, 0b000,0b101, 0b111, 0b101,0b101, 0b101 }, // M
 };
 
 // Draw a digit at (x0, y0) with your own pixel-drawing function
 void drawDigit(uint8_t digit, uint8_t x0, uint8_t y0, void (*drawPixel)(uint8_t, uint8_t, bool)) {
-  if (digit > 12) return;
+  if (digit > 15) return;
   for (uint8_t y = 0; y < 7; y++) {
     uint8_t row = digitBitmaps[digit][y];
     for (uint8_t x = 0; x < 3; x++) {
