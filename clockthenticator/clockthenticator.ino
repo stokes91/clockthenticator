@@ -29,19 +29,11 @@
 #include "MatrixDisplay_LED.hpp"
 
 #include "RTWPreferences.hpp"
-#include "SwitchControl.hpp"
 
 #include <Wire.h>
 #include <RTClib.h>
 
 #define MAX_FPS 1 // Maximum redraw rate, frames/second
-
-#define BUTTON_DEBOUNCE_MS 100
-
-#define BUTTON_UP    6  // A button
-#define BUTTON_DOWN  7  // B button
-#define BUTTON_NONE  -1
-
 
 uint32_t prevTime = 0; // Used for frames-per-second throttle
 
@@ -60,12 +52,6 @@ QR qr;
 RTWPreferences rtc;
 
 uint32_t lastTime = 0;
-uint32_t lastButtonPress = 0;
-int lastButtonPressed = 0;
-
-#define INVERT_SWITCH 1
-SwitchControl buttonUp(BUTTON_UP, 100);
-SwitchControl buttonDown(BUTTON_DOWN, 100);
 
 MatrixDisplay matrix;
 
@@ -81,9 +67,6 @@ void setup() {
     Serial.flush();
     while (1) delay(10);
   }
-
-  buttonUp.setup();
-  buttonDown.setup();
 
   rtc.start();
 
@@ -114,9 +97,6 @@ void setup() {
     // With a clock adjustment, also reset the offset.
     rtc.resetOffset();
   }
-  
-  buttonUp.setup();
-  buttonDown.setup();
 }
 
 void drawPixel(uint8_t x, uint8_t y, bool on) {
@@ -133,28 +113,6 @@ void qrDrawPixel(uint8_t x, uint8_t y, bool on) {
   matrix.drawPixel(x - 4, y - 4, on);
 } 
 
-void drawDigits(uint32_t date_coded_year, uint8_t digits, uint8_t x, uint8_t y) {
-
-  for (uint8_t l = digits, i = 0; l--; i++) {
-    uint8_t digit = date_coded_year % 10;
-    date_coded_year -= digit;
-    date_coded_year /= 10;
-  
-    drawDigit(digit, i * -4 + x, y, drawPixel);
-  }
-}
-
-void drawDigitsDoubled(uint32_t date_coded_year, uint8_t digits, uint8_t x, uint8_t y) {
-
-  for (uint8_t l = digits, i = 0; l--; i++) {
-    uint8_t digit = date_coded_year % 10;
-    date_coded_year -= digit;
-    date_coded_year /= 10;
-  
-    drawDigitDoubled(digit, i * -8 + x, y, drawPixel);
-  }
-}
-
 
 void loop() {
 
@@ -170,33 +128,6 @@ void loop() {
 
   lastTime = now; 
 
-  buttonUp.loop(now, msAgo);
-  buttonDown.loop(now, msAgo);
-
-  if (buttonUp.getVirtualState() && lastButtonPressed != BUTTON_UP) {
-
-    rtc.offsetUp();
-
-    Serial.println("Up button pressed");
-    lastButtonPress = millis();
-    lastButtonPressed = BUTTON_UP;
-  } else if (buttonDown.getVirtualState() && lastButtonPressed != BUTTON_DOWN) {
-    
-    rtc.offsetDown();
-    
-    Serial.println("Down button pressed");
-    lastButtonPress = millis();
-    lastButtonPressed = BUTTON_DOWN;
-  } else if (rtc.uncommittedChanges() && (millis() - lastButtonPress) > 60000) {
-
-    Serial.println("Committing changes");
-    // Identify the difference from the current eeprom
-    rtc.commit();
-  }
-
-  if ((millis() - lastButtonPress) > BUTTON_DEBOUNCE_MS) {
-    lastButtonPressed = BUTTON_NONE;
-  }
 
   // Check millis first to limit frame rate
   uint32_t t;
