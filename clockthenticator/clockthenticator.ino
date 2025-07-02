@@ -23,7 +23,7 @@
 #include "HOTP.hpp"
 #include "Coord.hpp"
 #include "QR.hpp"
-#include "SevenSeg.hpp"
+#include "DotMatrixDisplay.hpp"
 
 /* LED Matrix */
 #include "MatrixDisplay_LED.hpp"
@@ -240,16 +240,20 @@ void loop() {
 
   int date_coded_time = localDateUtil.getCurrentHHMM();
 
+  // Clear the matrix
+  matrix.fillScreen(false);
+
   if ((date_coded_time > 0 && date_coded_time < 600) || 
       (date_coded_time > 1800 && date_coded_time < 2400)) {
     matrix.setFgColor(32, 16, 3);
-    matrix.setBgColor(0, 0, 0);
   } else {
     matrix.setFgColor(255, 255, 255);
-    matrix.setBgColor(34, 34, 12);
   }
 
-  if (date_coded_time > 1259) {
+  move(29, 16);
+  writeText(AIRPORT_CODE, AIRPORT_CODE_LENGTH, drawPixel);
+  
+  if (date_coded_time >= 1200) {
     date_coded_time -= 1200;
     indicatorPm = true;
     indicatorAm = false;
@@ -257,31 +261,40 @@ void loop() {
     indicatorPm = false;
     indicatorAm = true;
   }
+  if (date_coded_time < 60) {
+    date_coded_time += 1200;
+  }
 
-  // Clear the matrix
-  matrix.fillScreen(false);
-
-  
-  drawDigits(date_coded_year, 4, WIDTH - 23, 25);
-
-  drawDigit(DIGIT_SEP_DATE, WIDTH - 20, 25, drawPixel);
 
   int date_coded_date = localDateUtil.getCurrentMMDD();
 
-  drawDigits(date_coded_date / 100, 2, WIDTH - 13, 25);
+// ── Group 1: full date (YYYY–MM–DD) ──
 
-  drawDigit(DIGIT_SEP_DATE, WIDTH - 10, 25, drawPixel);
 
-  drawDigits(date_coded_date % 100, 2, WIDTH - 3, 25);
-  
-  drawDigit(indicatorAm ? DIGIT_IND_A : DIGIT_IND_P, WIDTH - 10, 17, drawPixel);
-  drawDigit(DIGIT_IND_M, WIDTH - 6, 17, drawPixel);
+  move(29, 25);
 
-  drawDigitsDoubled(date_coded_time / 100, 2, WIDTH - 27, 2);
+  writeDigits(date_coded_year, 4, drawPixel);
+  writeText("-", 1, drawPixel);
+  writeDigits(date_coded_date/100, 2, drawPixel);
+  writeText("-", 1, drawPixel);
+  writeDigits(date_coded_date%100, 2, drawPixel);
 
-  drawDigitDoubled(DIGIT_SEP_TIME, WIDTH - 21, 2, drawPixel);
 
-  drawDigitsDoubled(date_coded_time % 100, 2, WIDTH - 6, 2);
+// ── Group 2: AM/PM indicator ──
+
+  move(57, 16);
+
+  writeText(indicatorAm ? "A" : "P", 1, drawPixel);
+  writeText("m", 1, drawPixel);
+
+
+// ── Group 3: doubled‐size time (HH:MM) ──
+
+  move(29, 0);
+
+  writeDigitsDoubled(date_coded_time/100, 2, drawPixel);
+  writeTextDoubled(":", 1, drawPixel);
+  writeDigitsDoubled(date_coded_time%100, 2, drawPixel);
 
   // Convert to HHMM
 
